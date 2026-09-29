@@ -1,0 +1,47 @@
+-- offline-conversion-health: data queries
+-- The two upload summary resources are available in recent Google Ads API versions;
+-- if yours rejects them, use Tools > Conversions > Uploads > Diagnostics in the interface.
+
+-- 1. Upload health by client (API, Google Ads UI, etc.)
+SELECT
+  offline_conversion_upload_client_summary.client,
+  offline_conversion_upload_client_summary.status,
+  offline_conversion_upload_client_summary.total_event_count,
+  offline_conversion_upload_client_summary.successful_event_count,
+  offline_conversion_upload_client_summary.success_rate,
+  offline_conversion_upload_client_summary.last_upload_date_time,
+  offline_conversion_upload_client_summary.alerts
+FROM offline_conversion_upload_client_summary
+
+-- 2. Upload health by conversion action
+SELECT
+  offline_conversion_upload_conversion_action_summary.conversion_action_name,
+  offline_conversion_upload_conversion_action_summary.client,
+  offline_conversion_upload_conversion_action_summary.status,
+  offline_conversion_upload_conversion_action_summary.total_event_count,
+  offline_conversion_upload_conversion_action_summary.successful_event_count,
+  offline_conversion_upload_conversion_action_summary.last_upload_date_time,
+  offline_conversion_upload_conversion_action_summary.alerts
+FROM offline_conversion_upload_conversion_action_summary
+
+-- 3. Conversion actions: type, primary, window, values
+SELECT
+  conversion_action.name,
+  conversion_action.type,
+  conversion_action.status,
+  conversion_action.category,
+  conversion_action.primary_for_goal,
+  conversion_action.counting_type,
+  conversion_action.click_through_lookback_window_days,
+  conversion_action.value_settings.default_value,
+  conversion_action.value_settings.always_use_default_value
+FROM conversion_action
+WHERE conversion_action.status = ENABLED
+
+-- 4. Auto-tagging on?
+SELECT
+  customer.descriptive_name,
+  customer.auto_tagging_enabled,
+  customer.time_zone,
+  customer.currency_code
+FROM customer

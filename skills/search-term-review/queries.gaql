@@ -1,0 +1,59 @@
+-- search-term-review: data queries
+-- Replace {start}, {end} and {day} with dates as 'YYYY-MM-DD'.
+-- cost_micros / 1,000,000 = cost in account currency.
+
+-- 1. Search terms (pull 90 days if you can)
+SELECT
+  campaign.name,
+  campaign.advertising_channel_type,
+  ad_group.name,
+  search_term_view.search_term,
+  search_term_view.status,
+  segments.date,
+  metrics.impressions,
+  metrics.clicks,
+  metrics.cost_micros,
+  metrics.conversions,
+  metrics.conversions_value
+FROM search_term_view
+WHERE segments.date BETWEEN '{start}' AND '{end}'
+  AND metrics.clicks > 0
+
+-- 2. Conversion lag by action (how long after the click conversions are recorded)
+-- If your API version rejects this combination, measure lag from the CRM instead.
+SELECT
+  segments.conversion_action_name,
+  segments.conversion_lag_bucket,
+  metrics.all_conversions
+FROM campaign
+WHERE segments.date BETWEEN '{start}' AND '{end}'
+
+-- 3. Click IDs to campaign, ad group and keyword (one day per query; last 90 days only)
+SELECT
+  click_view.gclid,
+  campaign.name,
+  ad_group.name,
+  click_view.keyword_info.text,
+  click_view.keyword_info.match_type,
+  segments.date
+FROM click_view
+WHERE segments.date = '{day}'
+
+-- 4. Existing campaign-level negative keywords
+SELECT
+  campaign.name,
+  campaign_criterion.keyword.text,
+  campaign_criterion.keyword.match_type
+FROM campaign_criterion
+WHERE campaign_criterion.negative = TRUE
+  AND campaign_criterion.type = KEYWORD
+
+-- 4b. Existing ad group-level negative keywords
+SELECT
+  campaign.name,
+  ad_group.name,
+  ad_group_criterion.keyword.text,
+  ad_group_criterion.keyword.match_type
+FROM ad_group_criterion
+WHERE ad_group_criterion.negative = TRUE
+  AND ad_group_criterion.type = KEYWORD

@@ -1,0 +1,61 @@
+-- target-box-check: data queries
+-- cost_micros, amount_micros and target_cpa_micros / 1,000,000 = account currency.
+-- target_roas is a ratio: 4.0 = 400%.
+
+-- 1. Campaigns with their strategy, target, budget and results (last 30 days)
+SELECT
+  campaign.name,
+  campaign.bidding_strategy_type,
+  campaign.bidding_strategy,
+  campaign.target_cpa.target_cpa_micros,
+  campaign.target_roas.target_roas,
+  campaign.maximize_conversions.target_cpa_micros,
+  campaign.maximize_conversion_value.target_roas,
+  campaign_budget.amount_micros,
+  campaign_budget.explicitly_shared,
+  metrics.cost_micros,
+  metrics.conversions,
+  metrics.conversions_value,
+  metrics.search_impression_share,
+  metrics.search_budget_lost_impression_share,
+  metrics.search_rank_lost_impression_share
+FROM campaign
+WHERE segments.date DURING LAST_30_DAYS
+  AND campaign.status = ENABLED
+
+-- 2. Portfolio bidding strategies
+SELECT
+  bidding_strategy.name,
+  bidding_strategy.type,
+  bidding_strategy.target_cpa.target_cpa_micros,
+  bidding_strategy.target_roas.target_roas,
+  bidding_strategy.maximize_conversions.target_cpa_micros,
+  bidding_strategy.maximize_conversion_value.target_roas,
+  bidding_strategy.campaign_count
+FROM bidding_strategy
+
+-- 3. Bidding and budget changes in the last 30 days (change_event needs a LIMIT)
+SELECT
+  change_event.change_date_time,
+  change_event.client_type,
+  change_event.change_resource_type,
+  change_event.changed_fields,
+  campaign.name
+FROM change_event
+WHERE change_event.change_date_time >= '{start_30_days_ago}'
+  AND change_event.change_date_time <= '{today}'
+  AND change_event.change_resource_type IN ('CAMPAIGN', 'CAMPAIGN_BUDGET', 'BIDDING_STRATEGY')
+ORDER BY change_event.change_date_time DESC
+LIMIT 1000
+
+-- 4. Conversion actions and which ones are primary
+SELECT
+  conversion_action.name,
+  conversion_action.type,
+  conversion_action.category,
+  conversion_action.primary_for_goal,
+  conversion_action.counting_type,
+  conversion_action.value_settings.default_value,
+  conversion_action.value_settings.always_use_default_value
+FROM conversion_action
+WHERE conversion_action.status = ENABLED

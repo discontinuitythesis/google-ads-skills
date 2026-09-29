@@ -1,0 +1,55 @@
+-- weekly-exception-note: data queries
+-- Replace {start}, {end} with 'YYYY-MM-DD'. Use the Monday five weeks ago to last Sunday.
+-- cost_micros and amount_micros / 1,000,000 = account currency.
+
+-- 1. Campaign by week, with budget and impression share
+SELECT
+  campaign.name,
+  campaign.advertising_channel_type,
+  campaign.bidding_strategy_type,
+  campaign_budget.amount_micros,
+  segments.week,
+  metrics.impressions,
+  metrics.clicks,
+  metrics.cost_micros,
+  metrics.conversions,
+  metrics.conversions_value,
+  metrics.search_impression_share,
+  metrics.search_budget_lost_impression_share,
+  metrics.search_rank_lost_impression_share
+FROM campaign
+WHERE segments.date BETWEEN '{start}' AND '{end}'
+  AND campaign.status = ENABLED
+
+-- 2. Conversions by action and week (all actions, primary and secondary)
+SELECT
+  segments.conversion_action_name,
+  segments.week,
+  metrics.all_conversions,
+  metrics.all_conversions_value
+FROM customer
+WHERE segments.date BETWEEN '{start}' AND '{end}'
+
+-- 3. Change history, last 14 days (change_event only covers the last 30 days and needs a LIMIT)
+SELECT
+  change_event.change_date_time,
+  change_event.client_type,
+  change_event.change_resource_type,
+  change_event.resource_change_operation,
+  change_event.changed_fields,
+  campaign.name
+FROM change_event
+WHERE change_event.change_date_time >= '{start_14_days_ago}'
+  AND change_event.change_date_time <= '{end}'
+ORDER BY change_event.change_date_time DESC
+LIMIT 1000
+
+-- 4. Landing page conversion rate by week (to spot a site change)
+SELECT
+  landing_page_view.unexpanded_final_url,
+  segments.week,
+  metrics.clicks,
+  metrics.conversions
+FROM landing_page_view
+WHERE segments.date BETWEEN '{start}' AND '{end}'
+  AND metrics.clicks > 20
